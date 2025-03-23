@@ -1,0 +1,13 @@
+# Node.js モジュール
+node_modules/
+
+# npm のログファイル
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ビルドファイル（React のビルド）
+build/
+
+# 環境変数ファイル
+.env
