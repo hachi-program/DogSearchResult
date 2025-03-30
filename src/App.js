@@ -5,11 +5,10 @@ import Question from './Question.js';
 import Result from './Result.js';
 
 function App() {
-  const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState([]);
   const [selectedBreed, setSelectedBreed] = useState(null);
   const [breedMapping, setBreedMapping] = useState({});
-// firebaseからデータを取得する
+
   useEffect(() => {
     const fetchBreeds = async () => {
       const querySnapshot = await getDocs(collection(db, "breeds"));
@@ -19,66 +18,150 @@ function App() {
       });
       setBreedMapping(breedsData);
     };
-
     fetchBreeds();
   }, []);
 
-  const questions = [
-    { question: "耳は立っていますか？", options: ["はい", "いいえ"] },
-    { question: "胴は長いですか？", options: ["はい", "いいえ"] },
-    { question: "足は長いですか？", options: ["はい", "いいえ"] }
-  ];
-
-  const determineBreed = (answers) => {
-    const conditions = {
-      "はい-はい-はい": "germanshepherd",
-      "はい-はい-いいえ": "corgi",
-      "はい-いいえ-はい": "doberman",
-      "いいえ-はい-はい": "dachshund",
-      "いいえ-いいえ-はい": "labrador",
-      "いいえ-いいえ-いいえ": "pug"
-    };
-
-    const key = answers.join("-");
-    const breedKey = conditions[key] || "pug";
-    return { en: breedKey, ...breedMapping[breedKey] };
-  };
-// 回答内容を配列に格納する
-  const handleAnswer = (answer) => {
-    const updatedAnswers = [...answers, answer];
-    setAnswers(updatedAnswers);
-
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-    } else {
-      const breed = determineBreed(updatedAnswers);
-      setSelectedBreed(breed);
+  const questions = {
+    question: "立ち耳ですか？",
+    options: {
+      "はい": {
+        question: "胴長短足ですか？",
+        options: {
+          "はい": { breed: "corgy" },
+          "いいえ": {
+            question: "大型犬ですか？",
+            options: {
+              "はい": {
+                question: "日本犬っぽいですか？",
+                options: {
+                  "はい": { breed: "akita" },
+                  "いいえ": { breed: "Shepherd" }
+                }
+              },
+              "いいえ": {
+                question: "毛は短いですか？",
+                options: {
+                  "はい": {
+                    question: "小型犬ですか？",
+                    options: {
+                      "はい": { breed: "frenchB" },
+                      "いいえ": { breed: "shiba" }
+                    }
+                  },
+                  "いいえ": {
+                    question: "耳が大きいですか？",
+                    options: {
+                      "はい": { breed: "papiyon" },
+                      "いいえ": { breed: "Yterrier" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "いいえ": {
+        question: "胴長短足ですか？",
+        options: {
+          "はい": { breed: "fund" },
+          "いいえ": {
+            question: "毛並みはカールしていますか？",
+            options: {
+              "はい": {
+                question: "小型犬ですか？",
+                options: {
+                  "はい": { breed: "poodle" },
+                  "いいえ": { breed: "stapu" }
+                }
+              },
+              "いいえ": {
+                question: "毛が短いですか？",
+                options: {
+                  "はい": {
+                    question: "しっぽはカールしていますか？",
+                    options: {
+                      "はい": { breed: "pag" },
+                      "いいえ": { breed: "burdog" }
+                    }
+                  },
+                  "いいえ": {
+                    question: "毛の色は白いですか？",
+                    options: {
+                      "はい": { breed: "marcheese" },
+                      "いいえ": {
+                        question: "眉毛やひげは長いですか？",
+                        options: {
+                          "はい": { breed: "shuna" },
+                          "いいえ": {
+                            question: "大型犬ですか？",
+                            options: {
+                              "はい": { breed: "GoldR" },
+                              "いいえ": { breed: "Szoo" }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   };
 
-    // もう一度診断をする（状態をリセット）
-    const retryDiagnosis = () => {
-      setCurrentQuestion(0);
-      setAnswers([]);
-      setSelectedBreed(null);
-    };
+  const getCurrentQuestion = (questions, answers) => {
+    let node = questions;
+    for (const answer of answers) {
+      if (node.options && node.options[answer]) {
+        node = node.options[answer];
+      } else {
+        return null;
+      }
+    }
+    return node;
+  };
+
+  const handleAnswer = (answer) => {
+    const updatedAnswers = [...answers, answer];
+    setAnswers(updatedAnswers);
+    
+    const currentNode = getCurrentQuestion(questions, updatedAnswers);
+    if (currentNode && currentNode.breed) {
+      setSelectedBreed({ en: currentNode.breed, ...breedMapping[currentNode.breed] });
+    }
+  };
+
+  const retryDiagnosis = () => {
+    setAnswers([]);
+    setSelectedBreed(null);
+  };
+
+  const currentNode = getCurrentQuestion(questions, answers);
 
   return (
     <div className="container">
       <h1 className="mt-4 text-primary">あの犬の種類は？🐕</h1>
       {selectedBreed ? (
         <div>
-        <Result breed={selectedBreed} />
-        <button className="btn btn-danger mt-3" onClick={retryDiagnosis}>
-          もう一度診断する
-        </button>
-      </div>
+          <Result breed={selectedBreed} />
+          <button className="btn btn-danger mt-3" onClick={retryDiagnosis}>
+            もう一度診断する
+          </button>
+        </div>
       ) : (
-        <Question
-          question={questions[currentQuestion].question}
-          options={questions[currentQuestion].options}
-          onAnswer={handleAnswer}
-        />
+        currentNode && currentNode.question ? (
+          <Question
+            question={currentNode.question}
+            options={Object.keys(currentNode.options)}
+            onAnswer={handleAnswer}
+          />
+        ) : (
+          <p>診断エラー</p>
+        )
       )}
     </div>
   );
